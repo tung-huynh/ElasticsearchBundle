@@ -38,12 +38,25 @@ Elasticsearch bundle provides managers called indexes to able to handle several 
 for communication with elasticsearch.
 
 Each index will have its dedicated manager that can be reached via service container by the 
-name of the namespace of the Document class that represents the index in question. So in our
+name of the namespace of the Index class that you defined in the configuration or by annotation. So in our
 case: 
 
 ```php
 
-$index = $container->get(Content::class);
+namespace App\Index;
+
+use ONGR\ElasticsearchBundle\Service\IndexService;
+
+#You just need to create empty class, this will be used for dependency injection later
+class ContentIndex extends IndexService
+{
+}
+
+```
+```php
+use App\Index\ContentIndex;
+
+$index = $container->get(ContentIndex::class);
 
 ```
 
@@ -82,8 +95,9 @@ There is a quicker way to update a document field without creating object or fet
 To update a field you need to know the document `ID` and fields to update. Here's an example:
 
 ```php
+use App\Index\ContentIndex;
 
-$index = $this->get(Content::class);
+$index = $this->get(ContentIndex::class);
 $index->update(1, ['title' => 'new title']);
 
 ```
@@ -92,8 +106,9 @@ You can also update fields with script operation, lets say, you want to do some 
 
 
 ```php
+use App\Index\ContentIndex;
 
-$index = $this->get(Content::class);
+$index = $this->get(ContentIndex::class);
 $index->update(1, [], 'ctx._source.stock+=1');
 
 ```
@@ -107,8 +122,9 @@ lets say we also want a content field and a new title, so just add them separate
 
 
 ```php
+use App\Index\ContentIndex;
 
-$index = $this->get(Content::class);
+$index = $this->get(ContentIndex::class);
 $index = $repo->update(1, ['title' => 'new title'], null, ['fields' => 'title,content']);
 
 ```
@@ -119,7 +135,9 @@ $index = $repo->update(1, ['title' => 'new title'], null, ['fields' => 'title,co
 Document removal can be performed similarly to create or update action:
 
 ```php
-$repo = $this->get('es.manager.default.content');
-$content = $repo->remove(5);
+use App\Index\ContentIndex;
+
+$index = $this->get(ContentIndex::class);
+$content = $index->remove(5);
 ```
 

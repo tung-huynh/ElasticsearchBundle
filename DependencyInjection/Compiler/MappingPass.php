@@ -74,72 +74,101 @@ class MappingPass implements CompilerPassInterface
             $document = $parser->getIndexAnnotation($class);
             $indexMetadata = $parser->getIndexMetadata($class);
 
-            if (!empty($indexMetadata)) {
-                $indexMetadata['settings'] = array_filter(
-                    array_replace_recursive(
-                        $indexMetadata['settings'] ?? [],
-                        [
-                            'number_of_replicas' => $document->numberOfReplicas,
-                            'number_of_shards' => $document->numberOfShards,
-                        ],
-                        $indexesOverride[$namespace]['settings'] ?? []
-                    ),
-                    function ($value) {
-                        if (0 === $value) {
-                            return true;
-                        }
-
-                        return (bool)$value;
-                    }
-                );
-
-                $indexSettings = new Definition(
-                    IndexSettings::class,
-                    [
-                        $namespace,
-                        $indexAlias,
-                        $indexAlias,
-                        $indexMetadata,
-                        $indexesOverride[$namespace]['hosts'] ?? $document->hosts,
-                        $indexesOverride[$namespace]['default'] ?? $document->default,
-                        $indexesOverride[$namespace]['type'] ?? $document->typeName
-                    ]
-                );
-
-                $indexServiceDefinition = new Definition(IndexService::class, [
-                    $namespace,
-                    $converterDefinition,
-                    $container->getDefinition('event_dispatcher'),
-                    $indexSettings,
-                    $container->getParameter(Configuration::ONGR_PROFILER_CONFIG)
-                        ? $container->getDefinition('ongr.esb.tracer') : null
-                ]);
-                $indexServiceDefinition->setPublic(true);
-                $converterDefinition->addMethodCall(
-                    'addClassMetadata',
-                    [
-                        $namespace,
-                        $parser->getPropertyMetadata($class)
-                    ]
-                );
-
-                $container->setDefinition($namespace, $indexServiceDefinition);
-                $this->indexes[$indexAlias] = $namespace;
-                $isCurrentIndexDefault = $parser->isDefaultIndex($class);
-                if ($this->defaultIndex && $isCurrentIndexDefault) {
-                    throw new \RuntimeException(
-                        sprintf(
-                            'Only one index can be set as default. We found 2 indexes as default ones `%s` and `%s`',
-                            $this->defaultIndex,
-                            $indexAlias
-                        )
-                    );
-                }
-
-                if ($isCurrentIndexDefault) {
-                    $this->defaultIndex = $indexAlias;
-                }
+            if (empty($indexMetadata)) {
+                continue;
             }
+
+            $indexManager = $indexesOverride[$namespace]['indexManager'] ?? $document->indexManager;
+            $this->validateIndexManager(
+                $indexManager,
+                $namespace
+            );
+
+            $indexMetadata['settings'] = array_filter(
+                array_replace_recursive(
+                    $indexMetadata['settings'] ?? [],
+                    [
+                        'number_of_replicas' => $document->numberOfReplicas,
+                        'number_of_shards' => $document->numberOfShards,
+                    ],
+                    $indexesOverride[$namespace]['settings'] ?? []
+                ),
+                function ($value) {
+                    if (0 === $value) {
+                        return true;
+                    }
+
+                    return (bool)$value;
+                }
+            );
+
+            $indexSettings = new Definition(
+                IndexSettings::class,
+                [
+                    $indexManager,
+                    $indexAlias,
+                    $indexAlias,
+                    $indexMetadata,
+                    $indexesOverride[$namespace]['hosts'] ?? $document->hosts,
+                    $indexesOverride[$namespace]['default'] ?? $document->default,
+                    $indexesOverride[$namespace]['type'] ?? $document->typeName
+                ]
+            );
+
+            $indexServiceDefinition = new Definition($indexManager, [
+                $namespace,
+                $converterDefinition,
+                $container->getDefinition('event_dispatcher'),
+                $indexSettings,
+                $container->getParameter(Configuration::ONGR_PROFILER_CONFIG)
+                    ? $container->getDefinition('ongr.esb.tracer') : null
+            ]);
+            $indexServiceDefinition->addTag(Configuration::ONGR_INDEXES);
+            $converterDefinition->addMethodCall(
+                'addClassMetadata',
+                [
+                    $namespace,
+                    $parser->getPropertyMetadata($class)
+                ]
+            );
+
+            $container->setDefinition($indexManager, $indexServiceDefinition);
+            $this->indexes[$indexAlias] = $namespace;
+            $isCurrentIndexDefault = $parser->isDefaultIndex($class);
+            if ($this->defaultIndex && $isCurrentIndexDefault) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Only one index can be set as default. We found 2 indexes as default ones `%s` and `%s`',
+                        $this->defaultIndex,
+                        $indexAlias
+                    )
+                );
+            }
+
+            if ($isCurrentIndexDefault) {
+                $this->defaultIndex = $indexAlias;
+            }
+        }
+    }
+
+    private function validateIndexManager(?string $indexManager, string $namespace)
+    {
+        if (null === $indexManager) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Index manager namespace must be defined. Suggestion: %s',
+                    str_replace('Document', 'Index', $namespace) . 'Index'
+                )
+            );
+        }
+
+        if (!class_exists($indexManager)) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Class %s does not exist',
+                    $indexManager
+                )
+            );
         }
     }
 

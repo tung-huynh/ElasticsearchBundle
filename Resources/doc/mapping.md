@@ -135,6 +135,7 @@ class MyIndex
 
 `@ES\Index` Annotation has these parameters:
 
+- `indexManager` - class name of the index  manager which will help to manager your indexes
 - `alias` - which represent what alias will be created for a newly created index via cli command using `-a` parameter.
 - `hosts` - here you can define elasticsearch hosts array, default is `127.0.0.1:9200`.
 - `default` - makes this index default for cli commands, in that case it is not necessary to define document namespace.
