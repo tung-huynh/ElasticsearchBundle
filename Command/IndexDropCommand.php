@@ -32,6 +32,12 @@ class IndexDropCommand extends AbstractIndexServiceAwareCommand
                 'f',
                 InputOption::VALUE_NONE,
                 'Force option is mandatory to drop the index.'
+            )
+            ->addOption(
+                'if-exists',
+                null,
+                InputOption::VALUE_NONE,
+                'Drop index only if exists.'
             );
     }
 
@@ -41,16 +47,23 @@ class IndexDropCommand extends AbstractIndexServiceAwareCommand
         if ($input->getOption('force')) {
             $index = $this->getIndex($input->getOption(parent::INDEX_OPTION));
 
-            $client =
+            if (!$index->getOption('if-exists') || $index->indexExists()) {
+                $index->dropIndex();
 
-            $result = $index->dropIndex();
-
-            $io->text(
-                sprintf(
-                    'The index <comment>`%s`</comment> was successfully dropped.',
-                    $index->getIndexName()
-                )
-            );
+                $io->text(
+                    sprintf(
+                        'The index <comment>`%s`</comment> was successfully dropped.',
+                        $index->getIndexName()
+                    )
+                );
+            } else {
+                $io->text(
+                    sprintf(
+                        'The index <comment>`%s`</comment> does not exist.',
+                        $index->getIndexName()
+                    )
+                );
+            }
         } else {
             $io->error('WARNING:');
             $io->text('This action should not be used in the production environment.');

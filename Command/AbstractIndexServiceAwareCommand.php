@@ -20,7 +20,15 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 abstract class AbstractIndexServiceAwareCommand extends Command
 {
+    /**
+     * @var ContainerInterface
+     */
     private $container;
+
+    /**
+     * @var IndexService[]
+     */
+    private $indexes;
 
     const INDEX_OPTION = 'index';
 
@@ -28,6 +36,14 @@ abstract class AbstractIndexServiceAwareCommand extends Command
     {
         $this->container = $container;
         parent::__construct();
+    }
+
+    /**
+     * @param iterable $indexes
+     */
+    public function setIndexes(iterable $indexes): void
+    {
+        $this->indexes = $indexes;
     }
 
     protected function configure()
@@ -45,15 +61,21 @@ abstract class AbstractIndexServiceAwareCommand extends Command
         $name = $name ?? $this->container->getParameter(Configuration::ONGR_DEFAULT_INDEX);
         $indexes = $this->container->getParameter(Configuration::ONGR_INDEXES);
 
-        if (isset($indexes[$name]) && $this->container->has($indexes[$name])) {
-            return $this->container->get($indexes[$name]);
+        if (isset($indexes[$name])) {
+            foreach ($this->indexes as $index) {
+                if ($name !== $index->getIndexName()) {
+                    continue;
+                }
+
+                return $index;
+            }
         }
 
         throw new \RuntimeException(
             sprintf(
                 'There is no index under `%s` name found. Available options: `%s`.',
                 $name,
-                implode('`, `', array_keys($this->container->getParameter(Configuration::ONGR_INDEXES)))
+                implode('`, `', array_keys($indexes))
             )
         );
     }

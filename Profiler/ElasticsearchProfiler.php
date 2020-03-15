@@ -16,6 +16,7 @@ use ONGR\ElasticsearchBundle\Profiler\Handler\CollectionHandler;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
+use Symfony\Component\VarDumper\Cloner\VarCloner;
 
 /**
  * Data collector for profiling elasticsearch bundle.
@@ -86,7 +87,7 @@ class ElasticsearchProfiler implements DataCollectorInterface
         return $this->queries;
     }
 
-    public function getIndexes(): array
+    public function getIndexes()
     {
         return $this->indexes;
     }

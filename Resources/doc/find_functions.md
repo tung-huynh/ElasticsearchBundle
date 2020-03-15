@@ -9,8 +9,9 @@ For all examples below we will use `Content` document class from the [CRUD actio
 Find by id will execute [elasticsearch get query](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html).
 
 ```php
+use App\Index\ContentIndex;
 
-$index = $this->get('Content::class');
+$index = $this->get(ContentIndex::class);
 
 /** @var $content Content **/
 $content = $index->find(1); // 5 is the document _uid in the elasticsearch.
@@ -38,8 +39,9 @@ Find by field uses [query_string query](https://www.elastic.co/guide/en/elastics
 
 
 ```php
+use App\Index\ContentIndex;
 
-$index = $this->get('Content::class');
+$index = $this->get(ContentIndex::class);
 
 /** @var $content Content **/
 $content = $index->findBy(['title' => 'Acme']);
@@ -73,8 +75,10 @@ This will return up to 20 documents with the word 'Acme' in their title, also it
 Completely the same as `findBy()` function, except it will return the first document.
 
 ```php
+use App\Index\ContentIndex;
 
-$index = $this->get('Content::class');
+
+$index = $this->get(ContentIndex::class);
 
 /** @var $content Content **/
 $content = $index->findOneBy(['title' => 'Acme']);

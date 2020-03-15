@@ -166,7 +166,13 @@ class DocumentParser
                     $embeddedFields[$name] = $annotation->class;
                 }
 
-                $mapping[$annotation->getName() ?? Caser::snake($name)] = array_filter($fieldMapping);
+                $mapping[$annotation->getName() ?? Caser::snake($name)] = array_filter(
+                    $fieldMapping,
+                    function ($value) {
+                        return null !== $value;
+                    }
+                );
+
                 $objFields[$name] = $annotation->getName() ?? Caser::snake($name);
                 $arrayFields[$annotation->getName() ?? Caser::snake($name)] = $name;
             }
